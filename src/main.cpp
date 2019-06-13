@@ -33,7 +33,7 @@ void sendData() {
 }
 
 void readSensor() {
-    auto t = (int16_t) dht.getTemperature() * 10;
+    auto t = (int16_t) dht.getTemperature();
     auto h = (uint16_t) dht.getHumidity();
 
     if (dht.getStatus() == DHTesp::ERROR_NONE) {

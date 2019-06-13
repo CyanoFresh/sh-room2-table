@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 namespace config {
-    const char WIFI_SSID[] = "Solomaha";
+    const char WIFI_SSID[] = "Solomaha_2";
     const char WIFI_PASSWORD[] = "solomakha21";
 
     const auto MQTT_HOST = IPAddress(192, 168, 1, 230);

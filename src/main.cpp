@@ -1,7 +1,7 @@
 #include <AsyncMqttClient.h>
 #include <ESP8266WiFi.h>
 #include <Ticker.h>
-#include <DHTesp.h>
+#include <DHT.h>
 #include "config.h"
 
 AsyncMqttClient mqttClient;
@@ -11,12 +11,16 @@ WiFiEventHandler wifiConnectHandler;
 WiFiEventHandler wifiDisconnectHandler;
 Ticker wifiReconnectTimer;
 
-DHTesp dht;
+Ticker readTimer;
 
-unsigned long lastTime = millis();
+DHT11 dht;
+
+volatile uint8_t humidity = 0;
+volatile uint8_t temperature = 0;
+volatile bool readReady = false;
 
 uint8_t readIteration = 0;
-int16_t tSum = 0;
+uint16_t tSum = 0;
 uint16_t hSum = 0;
 
 void sendData() {
@@ -26,40 +30,21 @@ void sendData() {
     mqttClient.publish("variable/room2-air_temperature", 0, false, String(t, 1).c_str());
     mqttClient.publish("variable/room2-air_humidity", 0, false, String(h).c_str());
 
-    Serial.print("Sent. T: ");
+    Serial.print("Sent: ");
     Serial.print(t);
-    Serial.print(", h: ");
-    Serial.println(h);
+    Serial.print(" C, ");
+    Serial.print(h);
+    Serial.println("%");
 }
 
-void readSensor() {
-    auto t = (int16_t) dht.getTemperature();
-    auto h = (uint16_t) dht.getHumidity();
+void readDHT() {
+    dht.read();
+}
 
-    if (dht.getStatus() == DHTesp::ERROR_NONE) {
-        readIteration++;
-
-        Serial.print("[");
-        Serial.print(readIteration);
-        Serial.print("] T: ");
-        Serial.print(t);
-        Serial.print(", h: ");
-        Serial.println(h);
-
-        tSum += t;
-        hSum += h;
-
-        if (readIteration == config::SENSOR_READ_COUNT) {
-            sendData();
-
-            readIteration = 0;
-            tSum = 0;
-            hSum = 0;
-        }
-    } else {
-        Serial.print(F("Error reading sensor: "));
-        Serial.println(dht.getStatusString());
-    }
+void ICACHE_RAM_ATTR handleData(float h, float t) {
+    humidity = (uint8_t) h;
+    temperature = (uint8_t) t;
+    readReady = true;
 }
 
 void connectToWifi() {
@@ -121,15 +106,26 @@ void setup() {
 
     connectToWifi();
 
-    dht.setup(config::DHT_PIN, DHTesp::DHT11);
+    dht.setPin(config::DHT_PIN);
+    dht.onData(handleData);
+
+    readTimer.attach(config::SENSOR_READ_INTERVAL, readDHT);
 }
 
 void loop() {
-    unsigned long time = millis();
+    if (readReady) {
+        tSum += temperature;
+        hSum += humidity;
+        readIteration++;
 
-    if (time - lastTime >= config::SENSOR_READ_INTERVAL * 1000) {
-        readSensor();
+        readReady = false;
 
-        lastTime = time;
+        if (readIteration == config::SENSOR_READ_COUNT) {
+            sendData();
+
+            readIteration = 0;
+            tSum = 0;
+            hSum = 0;
+        }
     }
 }

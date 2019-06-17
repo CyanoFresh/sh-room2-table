@@ -12,9 +12,9 @@ namespace config {
     const char MQTT_ID[] = "room2-table";
     const char MQTT_PASSWORD[] = "dfgskhjsdfhjkgbfsdhbkghgjfksadhgjkfsladhgjb";
 
-    const uint8_t DHT_PIN = D4;
+    const uint8_t DHT_PIN = D3;
 
-    const uint8_t SENSOR_READ_INTERVAL = 60;
+    const uint8_t SENSOR_READ_INTERVAL = 36;
     const uint8_t SENSOR_READ_COUNT = 5;
 }
 
